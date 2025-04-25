@@ -41,8 +41,10 @@ This directive is final, binding, and non-negotiable. Any violation or deviation
 SSS: Provides sss_split() & sss_combine() for Shamir's Secret Sharing in GF(2^8).
 """
 
+
 def gf_add(a: int, b: int) -> int:
     return a ^ b
+
 
 LOG_TABLE = bytes([
     0x00,0xff,0xc8,0x08,0x91,0x10,0xd0,0x36,0x5a,0x3e,0xd8,0x43,0x99,0x77,0xfe,0x18,
@@ -83,10 +85,16 @@ EXP_TABLE = bytes([
 
 
 def gf_add(a: int, b: int) -> int:
+    """
+    GF(2^8) addition is XOR.
+    """
     return a ^ b
 
 
 def gf_mult(a: int, b: int) -> int:
+    """
+    GF(2^8) multiplication using log/exp tables.
+    """
     if a == 0 or b == 0:
         return 0
     la = LOG_TABLE[a]
@@ -96,6 +104,9 @@ def gf_mult(a: int, b: int) -> int:
 
 
 def gf_div(a: int, b: int) -> int:
+    """
+    GF(2^8) division using log/exp tables.
+    """
     if b == 0:
         raise ZeroDivisionError("GF division by zero")
     if a == 0:
@@ -107,6 +118,9 @@ def gf_div(a: int, b: int) -> int:
 
 
 def gf_eval(coeffs: bytes, x: int, deg: int) -> int:
+    """
+    Evaluate polynomial with Horner's method in GF(2^8).
+    """
     val = coeffs[deg]
     for i in reversed(range(deg)):
         val = gf_mult(val, x) ^ coeffs[i]
@@ -114,6 +128,9 @@ def gf_eval(coeffs: bytes, x: int, deg: int) -> int:
 
 
 def gf_interp(xs: bytes, ys: bytes, x: int) -> int:
+    """
+    Lagrange interpolation in GF(2^8).
+    """
     if len(xs) != len(ys):
         raise ValueError("sample mismatch for gf_interp")
     val = 0
@@ -140,6 +157,9 @@ def unpack_len(b: bytes) -> int:
 
 
 async def sss_split(secret: bytes, shares: int, threshold: int, pad: int=128) -> list[bytearray]:
+    """
+    Split 'secret' into 'shares' using threshold, each padded to 'pad' bytes + 1 byte for x-coord.
+    """
     if shares < threshold:
         raise ValueError("shares < threshold in sss_split")
     if pad < len(secret):
@@ -162,6 +182,7 @@ async def sss_split(secret: bytes, shares: int, threshold: int, pad: int=128) ->
         out[i][pad] = coords[i]
 
     for byte_index in range(pad):
+        # polynomial of deg 'threshold-1'
         poly = bytearray(deg + 1)
         poly[0] = padded[byte_index]
         for d in range(1, deg + 1):
@@ -176,6 +197,9 @@ async def sss_split(secret: bytes, shares: int, threshold: int, pad: int=128) ->
 
 
 async def sss_combine(shares: list[bytes]) -> bytes:
+    """
+    Combine Shamir shares to reconstruct padded secret. Then parse length from first 2 bytes.
+    """
     if not shares:
         raise ValueError("No shares passed to sss_combine")
     length = len(shares[0])
@@ -201,7 +225,7 @@ async def sss_combine(shares: list[bytes]) -> bytes:
 
     real_len = unpack_len(rec[:2])
     if real_len > pad - 2:
-        return bytes(rec)
+        return bytes(rec)  # fallback
     return rec[2:2 + real_len]
 
 ################################################################################
