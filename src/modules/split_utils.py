@@ -54,8 +54,8 @@ async def split_secret_and_dummy(real: bytes,
                                  real_thr: int,
                                  pad: int = 128):
     """
-    Splits 'real' into Shamir shares (correct_count) requiring real_thr to reconstruct.
-    Also generates 'incorrect_count' dummy shares of the same length.
+    Splits 'real' into Shamir shares for correct_count picks, requiring real_thr to reconstruct.
+    Also generates dummy_shares for incorrect_count picks. Each share is padded to 'pad' length.
     """
     log_debug(f"Splitting real secret: correct_count={correct_count}, threshold={real_thr}", level="INFO")
 
