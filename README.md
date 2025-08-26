@@ -1,57 +1,146 @@
-README.md
+<a href="https://github.com/foolshopedemocrazy/AnswerChain/blob/main/README.md">
+  <img src="https://img.shields.io/badge/📖%20View%20Full%20README-blue?style=for-the-badge" alt="View Full README" />
+</a>
+
 
 <img width="1048" height="187" alt="AnswerChain" src="https://github.com/user-attachments/assets/bb53db59-469e-4393-8a89-b8bc7ac2adf7" />
 
 
-    ▶▶ Restore your secret by answering security question offline
+***🛡️🔒🔑 Securely encrypt & decrypt data with custom security questions — all processed offline 🔑🔒🛡️***
+
+
+
+
 
 
 <img width="1536" height="1024" alt="a1122" src="https://github.com/user-attachments/assets/085df38b-f3af-4ccc-91e9-4257d89b2ebd" />
 
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/foolshopedemocrazy/AnswerChain)
+[![Coverage](https://img.shields.io/badge/coverage-developer%20tested-yellow)](https://github.com/foolshopedemocrazy/AnswerChain)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/foolshopedemocrazy/AnswerChain/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/foolshopedemocrazy/AnswerChain/blob/main/LICENSE/LICENSE.txt)
+[![Maintenance](https://img.shields.io/badge/maintained-yes-brightgreen)](https://github.com/foolshopedemocrazy/AnswerChain/commits)
 
 
 # 📑 Table of Contents
 
-- [About AnswerChain](#about-answerchain)  
-- [Disclaimer](#disclaimer)  
-- [How does it work❓](#how-does-it-work)  
-- [🔒 Why the Security Questions File (kit) is Secure](#-why-the-security-questions-file-kit-is-secure)  
-  - [1. Key Derivation](#1-key-derivation)  
-  - [2. Cascade Encryption](#2-cascade-encryption)  
-  - [3. Secret Splitting (SSS)](#3-secret-splitting-sss)  
-  - [4. Standard vs Critical Questions](#4-standard-vs-critical-questions)  
-  - [5. Wrong Answers and Decoys](#5-wrong-answers-and-decoys)  
-  - [6. Final Verification](#6-final-verification)  
-  - [7. Offline and Passwordless](#7-offline-and-passwordless)  
-  - [8. Leak Resilience](#8-leak-resilience)  
-  - [9. Brute-Force Cost Analysis](#9-brute-force-cost-analysis)  
-- [10. Trusted Cryptographic Libraries](#10-uses-trusted-cryptographic-libraries-and-implementations)  
-- [11. The Code](#11-the-code)  
-- [12. Potential Leak](#12-potential-leak)  
-- [Threat-Model–Driven Inspiration](#threat-modeldriven-inspiration)  
-- [Use Cases](#use-cases)  
-- [🔮 Example Features & Ideas](#example-of-a-features-that-could-be-added-i-need-your-help-for-inspiration)  
-  - [Privacy Protection via Tolerance-Based Authentication](#-privacy-protection-via-tolerance-based-authentication-for-the-security-questions)  
-  - [Server-Side Authentication](#-server-side-authentication)  
-  - [Unified Framework of Human-Centric Authentication](#-unified-framework-of-human-centric-authentication-factors-combining-biometrics-cognition-perception-behavior-and-psychometric-patterns)  
-- [How to Use the Application](#how-to-use-the-application)  
-  - [1. Prepare a Secure Environment](#1-prepare-a-secure-environment)  
-  - [2. Run and Configure the Application](#2-run-and-configure-the-application)  
-  - [3. Verify Your Setup](#3-verify-your-setup)  
-- [Help Me Out ❤️](#help-me-out-)  
-- [FAQ](#faq)  
-- [Contact](#contact)  
+- [About AnswerChain](#about-answerchain)
+- [Disclaimer](#disclaimer)
+- [How does it work❓](#how-it-works)
+
+<details>
+  <summary>🔒 Why the Security Questions File (kit) is Secure</summary>
+
+  - [1. Key Derivation](#key-derivation)
+  - [2. Cascade Encryption](#cascade-encryption)
+  - [3. Secret Splitting (SSS)](#shamir-secret-sharing)
+  - [4. Standard vs Critical Questions](#standard-vs-critical)
+  - [5. Wrong Answers and Decoys](#wrong-answers-and-decoys)
+  - [6. Final Verification](#final-verification)
+  - [7. Offline and Passwordless](#offline-passwordless)
+  - [8. Leak Resilience](#leak-resilience)
+  - [9. Brute-Force Cost Analysis](#brute-force-cost)
+</details>
+
+- [10. Trusted Cryptographic Libraries](#trusted-crypto-libs)
+- [11. The Code](#the-code)
+- [12. Potential Leak](#data-leak)
+- [Threat-Model–Driven Inspiration](#threat-model-inspiration)
+- [Use Cases](#use-cases)
+
+<details>
+  <summary>🔮 Example Features & Ideas</summary>
+
+  - [Privacy Protection via Tolerance-Based Authentication](#tolerance-based-auth)
+  - [Server-Side Authentication](#server-side-auth)
+  - [Unified Framework of Human-Centric Authentication](#human-centric-auth)
+</details>
+
+<details>
+  <summary>⚙️ How to Use the Application</summary>
+
+  - [1. Prepare a Secure Environment](#prepare-environment)
+  - [2. Run and Configure the Application](#run-configure)
+  - [3. Verify Your Setup](#verify-setup)
+</details>
+
+- [Help Me Out ❤️](#help-me-out)
+- [FAQ](#faq)
+- [Contact](#contact)
+
+---
+
+<!-- 
+ANCHOR FIXES — PASTE THESE EXACTLY ONE LINE ABOVE EACH MATCHING HEADING.
+This guarantees the TOC links work regardless of emojis/punctuation in the heading text.
+-->
+
+<!-- About -->
+<a id="about-answerchain"></a>
+
+<!-- Disclaimer -->
+<a id="disclaimer"></a>
+
+<!-- How it works -->
+<a id="how-it-works"></a>
+
+<!-- Why Secure (section) -->
+<a id="why-secure"></a>
+
+<!-- Why Secure — subsections -->
+<a id="key-derivation"></a>
+<a id="cascade-encryption"></a>
+<a id="shamir-secret-sharing"></a>
+<a id="standard-vs-critical"></a>
+<a id="wrong-answers-and-decoys"></a>
+<a id="final-verification"></a>
+<a id="offline-passwordless"></a>
+<a id="leak-resilience"></a>
+<a id="brute-force-cost"></a>
+
+<!-- Libraries / Code / Leak -->
+<a id="trusted-crypto-libs"></a>
+<a id="the-code"></a>
+<a id="data-leak"></a>
+
+<!-- Threat model / Use cases -->
+<a id="threat-model-inspiration"></a>
+<a id="use-cases"></a>
+
+<!-- Feature ideas (subsections) -->
+<a id="tolerance-based-auth"></a>
+<a id="server-side-auth"></a>
+<a id="human-centric-auth"></a>
+
+<!-- How to use (subsections) -->
+<a id="prepare-environment"></a>
+<a id="run-configure"></a>
+<a id="verify-setup"></a>
+
+<!-- Support / FAQ / Contact -->
+<a id="help-me-out"></a>
+<a id="faq"></a>
+<a id="contact"></a>
 
 
+&nbsp;  
+&nbsp;  
 
 
- # About AnswerChain
+ # 🔗 About AnswerChain
 AnswerChain provides an offline, passwordless recovery system that empowers individuals and organizations to restore secrets securely. By allowing users to create their own knowledge-based questions and answer options, secrets can be rebuilt without relying on passwords—protected by modern cryptography to ensure safety and trust.
 
+
+
+
+
+# 🚨⚠️🚨 Disclaimer 🚨⚠️🚨
+
 Is this program secure to use?  
-- This program was developed with extensive AI assistance. While care has been taken to ensure safety, NO SOFTWARE CAN BE GUARANTEED 100% SECURE. At this stage, I would ***NOT RECOMMEND USING THIS PROGRAM UNTIL IT HAS MATURED ENOUGH*** (e.g., gained broader community recognition, reviews, and testing).
+- This program was developed with extensive AI assistance. While care has been taken to ensure safety, NO SOFTWARE CAN BE GUARANTEED 100% SECURE. At this stage, I would ***NOT RECOMMEND USING THIS PROGRAM FOR IT's INTENDED PURPOSE UNTIL IT HAS MATURED ENOUGH*** (e.g., gained broader community recognition, reviews, and testing).
 
-
+Have you had prior experience with coding?
+- No, I have not. This is my first application!
 
 
 
@@ -62,7 +151,7 @@ Is this program secure to use?
 
 
 
-## ❓ How it works  
+## ❓ How does it work
 
 1️⃣. **User defines their own questions**  
 You create your own security questions (e.g., *“What was my first pet’s name?”*)  
@@ -212,7 +301,7 @@ showing the estimated difficulty of cracking the configuration with modern hardw
 Users can then adjust Argon2id parameters, thresholds, or question sets  
 if they want even stronger security.  
 
-## 10. Uses trusted encryption libraries
+## 10. Uses trusted Cryptographic libraries and implementations
 
 🔒 Cryptography Library Audits
 
@@ -230,18 +319,26 @@ if they want even stronger security.
 
 ## [Shamir Secret Sharing (privy-io)](https://github.com/privy-io/shamir-secret-sharing)
 - **Software audit:** ✅ Yes (audited twice)  
-- **Algorithm audit:** ✅ Yes  
+- **Algorithm audit:** ✅ Yes
+
+---
+
+## 11. The code
+
+The program is deliberately lightweight, with a minimal codebase—meaning there’s less surface area for potential vulnerabilities and easier maintainability. In practice, **less code often translates into safer code**.  
+
+It adheres to the [OWASP Secure Coding Practices](https://owasp.org/www-project-secure-coding-practices-quick-reference-guide/stable-en/02-checklist/05-checklist) and incorporates additional industry-recognized best practices to ensure robust, secure, and reliable implementation.  
 
 
 
 ---
 
+## 12. Potential leak
 
-Even in a **total leak scenario**, the true secret remains secure  
-without the exact knowledge answers.  
+During use, the program operates in an inherently sensitive state.
+At rest, however, the kit remains secure—even in the event of a total data leak, the true secret cannot be derived without the exact knowledge-based answers. In fact, the entire system is designed around this very principle of security.
 
-
-
+---
 
 
 &nbsp;  
@@ -300,7 +397,7 @@ Protecting your password manager’s master password
 
 
 
-# Example of a feature that could be added (I need your help)!
+# Example of a features that could be added (I need your help for inspiration)!
 
 <details>
   <summary># 🔒 Privacy Protection via Tolerance-Based Authentication for the security questions</summary>
@@ -658,7 +755,7 @@ Optional safeguards include contacting trusted relatives or designated parties i
 
 
 
-# How to Use the Application
+# How to Use the Application ⚙️
 
 ## 1. Prepare a Secure Environment
 - Download and install a **trusted Live-CD Linux distribution** of your choice.  
@@ -776,8 +873,23 @@ Optional safeguards include contacting trusted relatives or designated parties i
 &nbsp;  
 
 
+# ❤️ Help me out!
 
-# FAQ
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/gbraad)
+
+
+As the sole developer currently working on this project, I am seeking support from developers with expertise in secure coding, cryptography, and related fields to help further develop and maintain the project.  
+
+All contributions are welcome, and I would greatly value any constructive feedback or suggestions for improvement.
+
+If you enjoyed testing the project and found it useful, please consider giving it a star ⭐ — your support is greatly appreciated!
+
+&nbsp;  
+&nbsp;  
+
+
+
+# 🔍 FAQ 🙋
 
 
 Is this program actively maintained?  
@@ -785,6 +897,17 @@ Is this program actively maintained?
 
 Has this program been audited?  
 - No, the program has not undergone a formal audit. However, if it gains significant popularity, an audit may be considered in the future.
+
+Is this program Open Source
+- YES!
+
+# 📬 Community & Contact
+
+
+
+[<img width="150" height="150" alt="matrix_icon (1)" src="https://github.com/user-attachments/assets/ae5bdc90-959c-470f-b930-75b1131b69e5" />](https://matrix.to/#/#answerchain:matrix.org) [<img width="150" height="150" alt="pngegg_icon (1)" src="https://github.com/user-attachments/assets/6729675c-ebc9-499d-9cfc-61677eccc060" />](https://b526769d.linkprotector.pages.dev/)
+
+
 
 
 
