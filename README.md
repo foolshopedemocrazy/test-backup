@@ -396,6 +396,125 @@ Protecting your password manager’s master password
 &nbsp;  
 
 
+# ⚙️ How to Use the Application
+
+## 1. Prepare a Secure Environment
+- Download and install a **trusted Live-CD Linux distribution** of your choice.  
+  <details>
+    <summary><em>Click to view recommended Live-CD Linux distributions</em></summary>
+
+    | Distro Name         | Base / Family      | ISO Size (Approx.) | Live CD/USB | RAM-Only Support | Notes                                                                 |
+    | ------------------- | ------------------ | ------------------ | ----------- | ---------------- | --------------------------------------------------------------------- |
+    | **Tails**           | Debian-based       | ~1.3 GB            | ✅ Yes      | ✅ Default        | Security/privacy-focused, *always RAM-only*, amnesic by design. Highest recommendation. |
+    | **Puppy Linux**     | Independent/Ubuntu | 400 MB             | ✅ Yes      | ✅ Default        | Runs entirely in RAM, ultra-fast, excellent for older hardware.        |
+    | **Slax**            | Debian-based       | 270 MB             | ✅ Yes      | ✅ Copy2RAM mode  | Modular, portable, RAM execution option, easy to carry on USB.         |
+    | **Porteus**         | Slackware-based    | 300 MB             | ✅ Yes      | ✅ Copy2RAM mode  | Built for USB, boots in seconds, RAM execution supported.              |
+    | **AntiX**           | Debian-based       | 700 MB             | ✅ Yes      | ✅ Frugal/toram   | Excellent for old PCs, Live/Frugal install supports RAM execution.     |
+    | **MX Linux (XFCE)** | Debian-based       | 1.6 GB             | ✅ Yes      | ✅ toram option   | User-friendly, strong live USB tools, persistence + RAM execution.     |
+    | **SliTaz**          | Independent        | 43 MB              | ✅ Yes      | ✅ Default        | Extremely small, designed to run fully in RAM.                         |
+    | **Damn Small Linux**| Knoppix-based      | 50 MB              | ✅ Yes      | ✅ Default        | Legacy revival, tiny footprint, RAM-based by design.                   |
+    | **Tiny Core Linux** | Independent        | 15–106 MB          | ✅ Yes      | ⚠️ Needs config   | Very minimal; runs in RAM but persistence requires manual setup.       |
+
+  </details>
+
+- Create a **bootable USB drive** with your chosen distribution.  
+  <details>
+    <summary><em>Click to view recommended USB creation tools</em></summary>
+
+    | Tool Name                   | Platform(s)             | Highlights                                        |
+    | --------------------------- | ----------------------- | ------------------------------------------------- |
+    | **balenaEtcher**            | Win, macOS, Linux       | GUI, validated flashing, user-friendly            |
+    | **Rufus**                   | Windows                 | Fast, advanced options, BIOS/UEFI                 |
+    | **dd**                      | Unix-like (Linux/macOS) | CLI, precise data copying                         |
+    | **Fedora Media Writer**     | Cross-platform          | Official Fedora support                           |
+    | **Ubuntu Live USB Creator** | Ubuntu & Windows        | Official Ubuntu USB tool                          |
+    | **UNetbootin**              | Cross-platform          | Lightweight, distro support, persistence          |
+    | **Ventoy**                  | Windows, Linux          | Multiboot, drag-and-drop ISOs, no reformat needed |
+    | **YUMI (exFAT)**            | Windows, Linux          | Multiboot with persistence                        |
+    | **Universal USB Installer** | Windows                 | Simple Linux/Windows ISO writes                   |
+    | **LinuxLive USB Creator**   | Windows                 | Live Linux via GUI                                |
+    | **GNOME Disks**             | Linux                   | Generic image writer                              |
+    | **WoeUSB**                  | Linux                   | Windows bootable USB creation                     |
+    | **Easy2Boot**               | Windows, Linux          | Multiboot, image partition support                |
+    | **TransMac**                | Windows                 | macOS image access and USB drive setup            |
+    | **Lightweight ISO Tools**   | Windows                 | Fast, no-frills ISO writers                       |
+    | **WinToUSB**                | Windows                 | Windows OS to USB drive                           |
+    | **SARDU**                   | Windows                 | Multi-ISO USB with tools                          |
+    | **MultiBootUSB**            | Cross-platform          | Multiboot live USB management                     |
+    | **RMPartUSB / RMPrepUSB**   | Windows                 | Advanced partition boot code handling             |
+    | **Ultimate Boot CD**        | Cross-platform (rescue) | Diagnostic, recovery toolset                      |
+    | **Parted Magic**            | Cross-platform (ISO)    | Partitioning, cloning, rescue, includes tools     |
+
+  </details>
+
+- **Include the AnswerChain program**:  
+  - Prepare a **secondary USB** (or use the same boot USB if space allows).  
+  - Store a **copy of the AnswerChain executable** on it for redundancy.  
+  - This ensures you can always access the program even if one USB fails.  
+
+- **Disconnect from the internet** (Wi-Fi and/or Ethernet) to operate in an **air-gapped environment**.  
+- Unplug all **unnecessary USB devices and peripherals**.  
+- In short: **reduce the attack surface** before working with security questions and encryption.  
+
+  <details>
+    <summary><em>Click for recommended hardening steps (strongly suggested)</em></summary>
+
+  **Hardware precautions**
+  - **Use a dedicated offline machine**: Ideally an old laptop/PC used only for this task.  
+  - **Remove/disable wireless interfaces**: Physically remove Wi-Fi/Bluetooth cards or disable them in BIOS/UEFI.  
+  - **Use write-protected media**: Prefer a USB drive with a **physical write-protect switch** for storing the final kit.
+
+  **OS & media integrity**
+  - **Verify ISO integrity** before flashing:  
+    ```bash
+    sha256sum your-distro.iso            # Compare to vendor's checksum
+    gpg --verify your-distro.iso.sig     # When a signature is provided
+    ```
+  - **Minimal install**: Avoid unnecessary packages; fewer binaries = fewer attack surfaces.  
+  - **Use read-only media** when possible: Boot from CD/DVD or a read-only USB image.  
+  - **Run entirely in RAM (RECOMMENDED)**: Many live distros support a *copy to RAM* option (e.g., `toram`, `copy2ram`). Choose this at boot if available. **Always run in RAM when you can.**
+
+  **Operational security (OpSec)**
+  - **No external storage**: Keep only the required USB connected while working.  
+  - **Multiple backups**: After encryption, keep **encrypted** backups in **separate physical locations**.  
+    - Online storage is acceptable **only for the encrypted artifact** (e.g., `.gpg`, `.age`, `.7z` with strong passphrase).  
+    - Prefer multiple brand-name USB devices you trust (malware-free).  
+  - **No logs left behind**: Clear history and temp files at the end of each session:  
+    ```bash
+    # Bash
+    unset HISTFILE; history -c; rm -f ~/.bash_history; sync
+    # Zsh
+    unset HISTFILE; : > ~/.zsh_history; sync
+    ```
+    *(Use OS-appropriate methods; commands vary by shell/distro.)*
+
+  </details>
+
+---
+
+## 2. Run and Configure the Application
+- Boot the live system (prefer **copy to RAM** / **toram**) and **launch the application**.  
+- Configure it to your requirements.  
+- Store the **security kit** (security questions + all encryption details) on your **write-protected USB**.  
+- Ensure a **secondary USB** contains the **AnswerChain program** in case of failure or reinstallation needs.  
+- Keep **only the required USB** attached while working.  
+
+---
+
+## 3. Verify Your Setup
+- **Version parity**: Use the **same software version** for decryption that you used for encryption to avoid compatibility issues.  
+- **Cold-boot test**: Power off, boot again, and ensure you can decrypt.  
+- **Cross-device test**: Try decrypting on multiple machines (different hardware).  
+- **Media independence**: Boot into the **same** live CD/USB and test; then boot into a **different** live CD/USB and test again.  
+- Confirm the decryption process works **exactly as intended** across scenarios. Proceed only when you are confident in **consistency and reliability**.  
+
+
+
+
+&nbsp;  
+&nbsp;  
+
+
 
 # Example of a features that could be added (I need your help for inspiration)!
 
@@ -754,141 +873,6 @@ Optional safeguards include contacting trusted relatives or designated parties i
 
 
 
-
-# ⚙️ How to Use the Application
-
-## 1. Prepare a Secure Environment
-- Download and install a **trusted Live-CD Linux distribution** of your choice.  
-  <details>
-    <summary><em>Click to view recommended Live-CD Linux distributions</em></summary>
-
-    | Distro Name         | Base / Family      | ISO Size (Approx.) | Live CD/USB | RAM-Only Support | Notes                                                                 |
-    | ------------------- | ------------------ | ------------------ | ----------- | ---------------- | --------------------------------------------------------------------- |
-    | **Tails**           | Debian-based       | ~1.3 GB            | ✅ Yes      | ✅ Default        | Security/privacy-focused, *always RAM-only*, amnesic by design. Highest recommendation. |
-    | **Puppy Linux**     | Independent/Ubuntu | 400 MB             | ✅ Yes      | ✅ Default        | Runs entirely in RAM, ultra-fast, excellent for older hardware.        |
-    | **Slax**            | Debian-based       | 270 MB             | ✅ Yes      | ✅ Copy2RAM mode  | Modular, portable, RAM execution option, easy to carry on USB.         |
-    | **Porteus**         | Slackware-based    | 300 MB             | ✅ Yes      | ✅ Copy2RAM mode  | Built for USB, boots in seconds, RAM execution supported.              |
-    | **AntiX**           | Debian-based       | 700 MB             | ✅ Yes      | ✅ Frugal/toram   | Excellent for old PCs, Live/Frugal install supports RAM execution.     |
-    | **MX Linux (XFCE)** | Debian-based       | 1.6 GB             | ✅ Yes      | ✅ toram option   | User-friendly, strong live USB tools, persistence + RAM execution.     |
-    | **SliTaz**          | Independent        | 43 MB              | ✅ Yes      | ✅ Default        | Extremely small, designed to run fully in RAM.                         |
-    | **Damn Small Linux**| Knoppix-based      | 50 MB              | ✅ Yes      | ✅ Default        | Legacy revival, tiny footprint, RAM-based by design.                   |
-    | **Tiny Core Linux** | Independent        | 15–106 MB          | ✅ Yes      | ⚠️ Needs config   | Very minimal; runs in RAM but persistence requires manual setup.       |
-
-  </details>
-
-- Create a **bootable USB drive** with your chosen distribution.  
-  <details>
-    <summary><em>Click to view recommended USB creation tools</em></summary>
-
-    | Tool Name                   | Platform(s)             | Highlights                                        |
-    | --------------------------- | ----------------------- | ------------------------------------------------- |
-    | **balenaEtcher**            | Win, macOS, Linux       | GUI, validated flashing, user-friendly            |
-    | **Rufus**                   | Windows                 | Fast, advanced options, BIOS/UEFI                 |
-    | **dd**                      | Unix-like (Linux/macOS) | CLI, precise data copying                         |
-    | **Fedora Media Writer**     | Cross-platform          | Official Fedora support                           |
-    | **Ubuntu Live USB Creator** | Ubuntu & Windows        | Official Ubuntu USB tool                          |
-    | **UNetbootin**              | Cross-platform          | Lightweight, distro support, persistence          |
-    | **Ventoy**                  | Windows, Linux          | Multiboot, drag-and-drop ISOs, no reformat needed |
-    | **YUMI (exFAT)**            | Windows, Linux          | Multiboot with persistence                        |
-    | **Universal USB Installer** | Windows                 | Simple Linux/Windows ISO writes                   |
-    | **LinuxLive USB Creator**   | Windows                 | Live Linux via GUI                                |
-    | **GNOME Disks**             | Linux                   | Generic image writer                              |
-    | **WoeUSB**                  | Linux                   | Windows bootable USB creation                     |
-    | **Easy2Boot**               | Windows, Linux          | Multiboot, image partition support                |
-    | **TransMac**                | Windows                 | macOS image access and USB drive setup            |
-    | **Lightweight ISO Tools**   | Windows                 | Fast, no-frills ISO writers                       |
-    | **WinToUSB**                | Windows                 | Windows OS to USB drive                           |
-    | **SARDU**                   | Windows                 | Multi-ISO USB with tools                          |
-    | **MultiBootUSB**            | Cross-platform          | Multiboot live USB management                     |
-    | **RMPartUSB / RMPrepUSB**   | Windows                 | Advanced partition boot code handling             |
-    | **Ultimate Boot CD**        | Cross-platform (rescue) | Diagnostic, recovery toolset                      |
-    | **Parted Magic**            | Cross-platform (ISO)    | Partitioning, cloning, rescue, includes tools     |
-
-  </details>
-
-- **Include the AnswerChain program**:  
-  - Prepare a **secondary USB** (or use the same boot USB if space allows).  
-  - Store a **copy of the AnswerChain executable** on it for redundancy.  
-  - This ensures you can always access the program even if one USB fails.  
-
-- **Disconnect from the internet** (Wi-Fi and/or Ethernet) to operate in an **air-gapped environment**.  
-- Unplug all **unnecessary USB devices and peripherals**.  
-- In short: **reduce the attack surface** before working with security questions and encryption.  
-
-  <details>
-    <summary><em>Click for recommended hardening steps (strongly suggested)</em></summary>
-
-  **Hardware precautions**
-  - **Use a dedicated offline machine**: Ideally an old laptop/PC used only for this task.  
-  - **Remove/disable wireless interfaces**: Physically remove Wi-Fi/Bluetooth cards or disable them in BIOS/UEFI.  
-  - **Use write-protected media**: Prefer a USB drive with a **physical write-protect switch** for storing the final kit.
-
-  **OS & media integrity**
-  - **Verify ISO integrity** before flashing:  
-    ```bash
-    sha256sum your-distro.iso            # Compare to vendor's checksum
-    gpg --verify your-distro.iso.sig     # When a signature is provided
-    ```
-  - **Minimal install**: Avoid unnecessary packages; fewer binaries = fewer attack surfaces.  
-  - **Use read-only media** when possible: Boot from CD/DVD or a read-only USB image.  
-  - **Run entirely in RAM (RECOMMENDED)**: Many live distros support a *copy to RAM* option (e.g., `toram`, `copy2ram`). Choose this at boot if available. **Always run in RAM when you can.**
-
-  **Operational security (OpSec)**
-  - **No external storage**: Keep only the required USB connected while working.  
-  - **Multiple backups**: After encryption, keep **encrypted** backups in **separate physical locations**.  
-    - Online storage is acceptable **only for the encrypted artifact** (e.g., `.gpg`, `.age`, `.7z` with strong passphrase).  
-    - Prefer multiple brand-name USB devices you trust (malware-free).  
-  - **No logs left behind**: Clear history and temp files at the end of each session:  
-    ```bash
-    # Bash
-    unset HISTFILE; history -c; rm -f ~/.bash_history; sync
-    # Zsh
-    unset HISTFILE; : > ~/.zsh_history; sync
-    ```
-    *(Use OS-appropriate methods; commands vary by shell/distro.)*
-
-  </details>
-
----
-
-## 2. Run and Configure the Application
-- Boot the live system (prefer **copy to RAM** / **toram**) and **launch the application**.  
-- Configure it to your requirements.  
-- Store the **security kit** (security questions + all encryption details) on your **write-protected USB**.  
-- Ensure a **secondary USB** contains the **AnswerChain program** in case of failure or reinstallation needs.  
-- Keep **only the required USB** attached while working.  
-
----
-
-## 3. Verify Your Setup
-- **Version parity**: Use the **same software version** for decryption that you used for encryption to avoid compatibility issues.  
-- **Cold-boot test**: Power off, boot again, and ensure you can decrypt.  
-- **Cross-device test**: Try decrypting on multiple machines (different hardware).  
-- **Media independence**: Boot into the **same** live CD/USB and test; then boot into a **different** live CD/USB and test again.  
-- Confirm the decryption process works **exactly as intended** across scenarios. Proceed only when you are confident in **consistency and reliability**.  
-
-
-
-&nbsp;  
-&nbsp;  
-
-
-# ❤️ Help me out!
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/gbraad)
-
-
-As the sole developer currently working on this project, I am seeking support from developers with expertise in secure coding, cryptography, and related fields to help further develop and maintain the project.  
-
-All contributions are welcome, and I would greatly value any constructive feedback or suggestions for improvement.
-
-If you enjoyed testing the project and found it useful, please consider giving it a star ⭐ — your support is greatly appreciated!
-
-&nbsp;  
-&nbsp;  
-
-
-
 # 🔍 FAQ 🙋
 
 
@@ -911,6 +895,24 @@ Is this program Open Source
 
 [<img width="150" height="150" alt="matrix_icon (1)" src="https://github.com/user-attachments/assets/ae5bdc90-959c-470f-b930-75b1131b69e5" />](https://matrix.to/#/#answerchain:matrix.org) [<img width="150" height="150" alt="pngegg_icon (1)" src="https://github.com/user-attachments/assets/6729675c-ebc9-499d-9cfc-61677eccc060" />](https://b526769d.linkprotector.pages.dev/)
 
+
+
+&nbsp;  
+&nbsp;  
+
+
+# ❤️ Help me out!
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/gbraad)
+
+
+As the sole developer currently working on this project, I am seeking support from developers with expertise in secure coding, cryptography, and related fields to help further develop and maintain the project.  
+
+All contributions are welcome, and I would greatly value any constructive feedback or suggestions for improvement.
+
+If you enjoyed testing the project and found it useful, please consider giving it a star ⭐ — your support is greatly appreciated!
+
+&nbsp;  
 
 
 
