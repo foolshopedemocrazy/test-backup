@@ -755,7 +755,7 @@ Optional safeguards include contacting trusted relatives or designated parties i
 
 
 
-# How to Use the Application ⚙️
+# ⚙️ How to Use the Application
 
 ## 1. Prepare a Secure Environment
 - Download and install a **trusted Live-CD Linux distribution** of your choice.  
