@@ -16,9 +16,6 @@ Is this program secure to use?
 - This program was developed with extensive AI assistance. While care has been taken to ensure safety, NO SOFTWARE CAN BE GUARANTEED 100% SECURE. The same applies to most applications. At this stage, I would ***NOT RECOMMEND USING THIS PROGRAM UNTIL IT HAS MATURED ENOUGH*** (e.g., gained broader community recognition, reviews, and testing).
 
 
-Has this program been audited?  
-- No, the program has not undergone a formal audit. However, if it gains significant popularity, an audit may be considered in the future.
-
 
 
 
@@ -750,7 +747,8 @@ Optional safeguards include contacting trusted relatives or designated parties i
 Is this program actively maintained?  
 - Currently, the program is being maintained, but updates may vary depending on user interest and contributions.
 
-
+Has this program been audited?  
+- No, the program has not undergone a formal audit. However, if it gains significant popularity, an audit may be considered in the future.
 
 
 
