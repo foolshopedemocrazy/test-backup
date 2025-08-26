@@ -13,7 +13,8 @@ README.md
 AnswerChain provides an offline, passwordless recovery system that empowers individuals and organizations to restore secrets securely. By allowing users to create their own knowledge-based questions and answer options, secrets can be rebuilt without relying on passwords—protected by modern cryptography to ensure safety and trust.
 
 Is this program secure to use?  
-- This program was developed with heavy AI assistance. While efforts were made to ensure safety, no software can ever be guaranteed 100% secure. The same applies to other applications as well.
+- This program was developed with extensive AI assistance. While care has been taken to ensure safety, NO SOFTWARE CAN BE GUARANTEED 100% SECURE. The same applies to most applications. At this stage, I would ***NOT RECOMMEND USING THIS PROGRAM UNTIL IT HAS MATURED ENOUGH*** (e.g., gained broader community recognition, reviews, and testing).
+
 
 Has this program been audited?  
 - No, the program has not undergone a formal audit. However, if it gains significant popularity, an audit may be considered in the future.
