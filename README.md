@@ -25,10 +25,6 @@ Has this program been audited?
 
 &nbsp;  
 &nbsp;  
-&nbsp;
-
-
-
 
 
 
@@ -99,9 +95,6 @@ Only if this verification succeeds is the secret accepted as authentic.
 
 &nbsp;  
 &nbsp;  
-&nbsp;
-
-
 
 
 # 🔒 Why the Security Questions File (kit) is Secure  
@@ -218,15 +211,8 @@ without the exact knowledge answers.
 
 
 
-
-
-
 &nbsp;  
 &nbsp;  
-&nbsp;
-
-
-
 
 
 
@@ -254,11 +240,8 @@ without the exact knowledge answers.
 
 
 
-
 &nbsp;  
 &nbsp;  
-&nbsp;
-
 
 
 # Use Cases
@@ -278,14 +261,9 @@ Split recovery among relatives (e.g., **2-of-3**) so one trusted person alone ca
 
 Protecting your password manager’s master password  
 
+
 &nbsp;  
 &nbsp;  
-&nbsp;
-
-
-
-
-
 
 
 
@@ -641,24 +619,8 @@ Optional safeguards include contacting trusted relatives or designated parties i
 
 
 
-
-
-
-
-
-
-
-
-
-
-&nbsp;  
 &nbsp;  
 &nbsp;
-
-
-
-
-
 
 
 
@@ -779,8 +741,6 @@ Optional safeguards include contacting trusted relatives or designated parties i
 
 &nbsp;  
 &nbsp;  
-&nbsp;
-
 
 
 
