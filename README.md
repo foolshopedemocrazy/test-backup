@@ -901,7 +901,7 @@ Has this program been audited?
 Is this program Open Source
 - YES!
 
-# 📬 Community & Contact
+# 🌐📬 Community & Contact
 
 
 
