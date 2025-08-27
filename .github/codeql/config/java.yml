@@ -5,10 +5,8 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "src/main/java"
   - "src"
   - "lib"
-  - "services"
   - "**/*.java"
 
 paths-ignore:
@@ -34,3 +32,8 @@ paths-ignore:
   - "*.md"
 
 disable-default-path-filters: true
+
+# Enable buildless extraction for repositories without standard build files
+extraction:
+  java:
+    buildless: "true"
