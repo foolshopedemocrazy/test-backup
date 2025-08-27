@@ -27,8 +27,14 @@ jobs:
     outputs:
       langs: ${{ steps.set.outputs.languages }}
     steps:
-      - uses: advanced-security/set-codeql-language-matrix@v1
+      - name: Detect CodeQL languages
         id: set
+        uses: advanced-security/set-codeql-language-matrix@v1
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          endpoint: ${{ github.api_url }}/repos/${{ github.repository }}/languages
+          # optional: exclude languages (comma-separated)
+          # exclude: "ruby,swift"
 
   analyze:
     needs: detect-languages
