@@ -54,8 +54,9 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # If no Go modules are present, use 'none' so the job won't error on finalize.
-          build-mode: ${{ (matrix.language == 'go' && steps.gomods.outputs.count == '0') && 'none' || matrix.build-mode }}
+          # Always use the matrix build-mode for Go, even if no modules are found
+          # We'll skip the analyze step later if needed
+          build-mode: ${{ matrix.build-mode }}
           config-file: .github/codeql-config.yml
 
       # Build only the Go modules we care about
@@ -68,10 +69,8 @@ jobs:
           done < go_mod_list.txt
 
       - name: Analyze
-        # Skip analyze for Go if we had no modules (init used build-mode=none)
+        # Skip analyze for Go if we had no modules
         if: matrix.language != 'go' || steps.gomods.outputs.count != '0'
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
-
-
