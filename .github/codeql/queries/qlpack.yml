@@ -1,0 +1,8 @@
+name: your-org/repo-queries
+version: 0.0.1
+dependencies:
+  codeql/javascript-all: "*"
+  codeql/python-all: "*"
+  # codeql/java-all: "*"
+  # codeql/csharp-all: "*"
+  # codeql/cpp-all: "*"
