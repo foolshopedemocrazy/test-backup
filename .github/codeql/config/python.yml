@@ -1,0 +1,15 @@
+name: advanced-repo-config-python
+paths:
+  - src/
+  - app/
+  - services/
+paths-ignore:
+  - tests/
+  - test/
+  - third_party/
+  - vendor/
+  - '**/*.generated.*'
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+  - uses: ./.github/codeql/queries/python
