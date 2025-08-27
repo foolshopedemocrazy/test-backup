@@ -60,8 +60,10 @@ jobs:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql/config/${{ matrix.language }}.yml
 
-      - name: Autobuild (Java only)
-        if: matrix.language == 'java'
+      # Skip autobuild for Java since we're using buildless extraction
+      # Only run autobuild for compiled languages that need it
+      - name: Autobuild (skip for Java with buildless)
+        if: matrix.language != 'java'
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
