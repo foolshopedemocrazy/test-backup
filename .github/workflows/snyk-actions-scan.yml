@@ -1,0 +1,213 @@
+name: Snyk GitHub Actions Scanner
+
+on:
+  # Scan all workflows when changes are pushed to main or master
+  push:
+    branches: [ main, master ]
+    paths:
+      - '.github/workflows/**'
+  
+  # Scan when workflow files are modified in PRs
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '.github/workflows/**'
+  
+  # Regular scheduled scans
+  schedule:
+    - cron: '0 0 * * 1' # Weekly scan on Mondays at midnight
+  
+  # Manual trigger
+  workflow_dispatch:
+
+jobs:
+  snyk-actions-scan:
+    name: Scan GitHub Actions Workflows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      id-token: write # Required for Snyk integration
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for scanning
+      
+      # Setup Node.js environment for running the scanner
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      # Install the scanner globally
+      - name: Install Snyk GitHub Actions Scanner
+        run: |
+          npm install -g @snyk/github-actions-scanner
+          echo "Installed version: $(github-actions-scanner --version)"
+      
+      # Authenticate with Snyk (if token available)
+      - name: Authenticate with Snyk
+        if: env.SNYK_TOKEN != ''
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      
+      # Scan all workflow files
+      - name: Scan workflows
+        id: scan
+        run: |
+          # Create output directory
+          mkdir -p snyk-actions-scan-results
+          
+          # Run the scanner
+          github-actions-scanner scan \
+            --repo-path=. \
+            --output-file=snyk-actions-scan-results/scan-results.json \
+            --output-format=json \
+            --config-file=.snyk/actions-scanner-config.json
+          
+          # Generate summary for GitHub Actions
+          echo "### Snyk GitHub Actions Scanner Results" >> $GITHUB_STEP_SUMMARY
+          github-actions-scanner report \
+            --input-file=snyk-actions-scan-results/scan-results.json \
+            --format=markdown >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+      
+      # Generate SARIF report for GitHub Security tab
+      - name: Generate SARIF report
+        if: success() || steps.scan.outcome == 'failure'
+        run: |
+          github-actions-scanner report \
+            --input-file=snyk-actions-scan-results/scan-results.json \
+            --format=sarif \
+            --output-file=snyk-actions-scan-results/results.sarif
+      
+      # Upload SARIF file to GitHub Security
+      - name: Upload SARIF file
+        if: success() || steps.scan.outcome == 'failure'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-actions-scan-results/results.sarif
+          category: snyk-actions-scanner
+      
+      # Upload full results as artifacts
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-actions-scan-results
+          path: snyk-actions-scan-results
+          retention-days: 7
+      
+      # Comment on PR with findings if running on a PR
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && (success() || steps.scan.outcome == 'failure')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            try {
+              // Read scan results
+              const scanResults = JSON.parse(fs.readFileSync('snyk-actions-scan-results/scan-results.json', 'utf8'));
+              
+              // Generate markdown report
+              let markdownReport = `## 🔍 Snyk GitHub Actions Workflow Security Scan\n\n`;
+              
+              // Check if we have any findings
+              if (scanResults.findings && scanResults.findings.length > 0) {
+                markdownReport += `### 🚨 Found ${scanResults.findings.length} potential security issues in workflow files\n\n`;
+                
+                // Group by severity
+                const severityGroups = {
+                  critical: [],
+                  high: [],
+                  medium: [],
+                  low: []
+                };
+                
+                // Group findings by severity
+                scanResults.findings.forEach(finding => {
+                  const severity = finding.severity ? finding.severity.toLowerCase() : 'low';
+                  if (severityGroups[severity]) {
+                    severityGroups[severity].push(finding);
+                  } else {
+                    severityGroups.low.push(finding);
+                  }
+                });
+                
+                // Display findings by severity (highest first)
+                if (severityGroups.critical.length > 0) {
+                  markdownReport += `### Critical Severity Issues (${severityGroups.critical.length})\n\n`;
+                  severityGroups.critical.forEach(finding => {
+                    markdownReport += `- **${finding.title || 'Security Issue'}**: ${finding.description || 'No description'}\n`;
+                    if (finding.file) markdownReport += `  - File: \`${finding.file}\`\n`;
+                    if (finding.remediation) markdownReport += `  - Recommendation: ${finding.remediation}\n`;
+                    markdownReport += '\n';
+                  });
+                }
+                
+                if (severityGroups.high.length > 0) {
+                  markdownReport += `### High Severity Issues (${severityGroups.high.length})\n\n`;
+                  severityGroups.high.forEach(finding => {
+                    markdownReport += `- **${finding.title || 'Security Issue'}**: ${finding.description || 'No description'}\n`;
+                    if (finding.file) markdownReport += `  - File: \`${finding.file}\`\n`;
+                    if (finding.remediation) markdownReport += `  - Recommendation: ${finding.remediation}\n`;
+                    markdownReport += '\n';
+                  });
+                }
+                
+                if (severityGroups.medium.length > 0) {
+                  markdownReport += `### Medium Severity Issues (${severityGroups.medium.length})\n\n`;
+                  markdownReport += `<details><summary>Click to expand</summary>\n\n`;
+                  severityGroups.medium.forEach(finding => {
+                    markdownReport += `- **${finding.title || 'Security Issue'}**: ${finding.description || 'No description'}\n`;
+                    if (finding.file) markdownReport += `  - File: \`${finding.file}\`\n`;
+                    if (finding.remediation) markdownReport += `  - Recommendation: ${finding.remediation}\n`;
+                    markdownReport += '\n';
+                  });
+                  markdownReport += `</details>\n\n`;
+                }
+                
+                if (severityGroups.low.length > 0) {
+                  markdownReport += `### Low Severity Issues (${severityGroups.low.length})\n\n`;
+                  markdownReport += `<details><summary>Click to expand</summary>\n\n`;
+                  severityGroups.low.forEach(finding => {
+                    markdownReport += `- **${finding.title || 'Security Issue'}**: ${finding.description || 'No description'}\n`;
+                    if (finding.file) markdownReport += `  - File: \`${finding.file}\`\n`;
+                    if (finding.remediation) markdownReport += `  - Recommendation: ${finding.remediation}\n`;
+                    markdownReport += '\n';
+                  });
+                  markdownReport += `</details>\n\n`;
+                }
+                
+                // Add a note about the full report
+                markdownReport += `For complete details, check the [Actions tab](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).\n\n`;
+                
+                // Add best practices
+                markdownReport += `## 📚 GitHub Actions Security Best Practices\n\n`;
+                markdownReport += `- Use specific commit hashes instead of tags for third-party actions\n`;
+                markdownReport += `- Minimize the permissions granted to the GitHub token\n`;
+                markdownReport += `- Avoid using input data directly in commands (to prevent injection)\n`;
+                markdownReport += `- Set the \`permissions\` field explicitly in your workflows\n`;
+                markdownReport += `- Use secrets for sensitive data\n`;
+              } else {
+                markdownReport += `### ✅ No security issues found in workflow files\n\n`;
+                markdownReport += `Great job! Your GitHub Actions workflows follow good security practices. Keep it up!\n\n`;
+              }
+              
+              // Post the comment
+              const { data: comment } = await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: markdownReport
+              });
+              
+              console.log(`Created comment with ID ${comment.id}`);
+            } catch (error) {
+              console.log(`Error creating PR comment: ${error.message}`);
+            }

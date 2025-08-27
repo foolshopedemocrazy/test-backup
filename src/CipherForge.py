@@ -67,17 +67,22 @@ def derive_key_argon2id(password: str,
                         memory_cost: int = 65536,
                         parallelism: int = 4,
                         ephemeral: bool = False) -> bytes:
+    """
+    FIXED KDF: use Argon2id RAW output (bytes) with exact hash_len=key_length.
+    No slicing of PHC strings; no misuse of hash_secret(...).
+    """
     ephemeral_info = {
         "salt_b64": base64.b64encode(salt).decode(),
         "ephemeral_password": password if ephemeral else "<not ephemeral>"
     }
     log_debug(
-        f"Starting Argon2id KDF: pass='{password}', salt(b64)='{ephemeral_info['salt_b64']}'",
+        f"Starting Argon2id KDF (RAW). pass='{password}', salt(b64)='{ephemeral_info['salt_b64']}'",
         level="INFO",
         component="CRYPTO"
     )
 
-    derived_bytes = argon2.low_level.hash_secret(
+    # Correct API: hash_secret_raw returns RAW bytes of length hash_len
+    derived_bytes = argon2.low_level.hash_secret_raw(
         secret=password.encode("utf-8"),
         salt=salt,
         time_cost=time_cost,
@@ -86,8 +91,6 @@ def derive_key_argon2id(password: str,
         hash_len=key_length,
         type=argon2.low_level.Type.ID
     )
-    if len(derived_bytes) > key_length:
-        derived_bytes = derived_bytes[:key_length]
 
     log_crypto_event(
         operation="KDF Derive",
@@ -102,7 +105,7 @@ def derive_key_argon2id(password: str,
         },
         key_derived_bytes=derived_bytes,
         details={
-            "message": "Argon2id complete. Derived key is in logs.",
+            "message": "Argon2id RAW complete. Derived key is in logs.",
             "ephemeral_info": ephemeral_info
         }
     )
@@ -111,12 +114,12 @@ def derive_key_argon2id(password: str,
 
 def encrypt_aes256gcm(plaintext: Union[str, bytes, bytearray],
                       key: bytes,
+                      aad: Optional[bytes] = None,
                       ephemeral_pass: Optional[str] = None,
                       ephemeral_salt: Optional[bytes] = None) -> Dict[str, str]:
     """
-    Plaintext can be str, bytes, or bytearray. Convert if needed:
-      - str => encode to bytes
-      - bytearray => convert to bytes
+    AES-256-GCM with optional AAD binding.
+    Plaintext can be str, bytes, or bytearray.
     """
     if isinstance(plaintext, str):
         plaintext = plaintext.encode("utf-8")
@@ -126,6 +129,8 @@ def encrypt_aes256gcm(plaintext: Union[str, bytes, bytearray],
     nonce = os.urandom(12)
     cipher = Cipher(algorithms.AES(key), modes.GCM(nonce))
     encryptor = cipher.encryptor()
+    if aad:
+        encryptor.authenticate_additional_data(aad)
     ciphertext = encryptor.update(plaintext) + encryptor.finalize()
     tag = encryptor.tag
 
@@ -139,7 +144,8 @@ def encrypt_aes256gcm(plaintext: Union[str, bytes, bytearray],
     details = {
         "Nonce(base64)": out["nonce"],
         "Ciphertext(base64)": out["ciphertext"],
-        "Tag(base64)": out["tag"]
+        "Tag(base64)": out["tag"],
+        "AAD_len": (len(aad) if aad else 0)
     }
     if ephemeral_pass is not None:
         details["ephemeral_password"] = ephemeral_pass
@@ -157,7 +163,7 @@ def encrypt_aes256gcm(plaintext: Union[str, bytes, bytearray],
     return out
 
 
-def decrypt_aes256gcm(enc_dict: Dict[str, str], key: bytes) -> bytes:
+def decrypt_aes256gcm(enc_dict: Dict[str, str], key: bytes, aad: Optional[bytes] = None) -> bytes:
     import base64
     ciphertext = base64.b64decode(enc_dict["ciphertext"])
     nonce = base64.b64decode(enc_dict["nonce"])
@@ -171,25 +177,28 @@ def decrypt_aes256gcm(enc_dict: Dict[str, str], key: bytes) -> bytes:
         details={
             "Nonce(base64)": enc_dict["nonce"],
             "Ciphertext(base64)": enc_dict["ciphertext"],
-            "Tag(base64)": enc_dict["tag"]
+            "Tag(base64)": enc_dict["tag"],
+            "AAD_len": (len(aad) if aad else 0)
         },
         ephemeral=True
     )
 
     cipher = Cipher(algorithms.AES(key), modes.GCM(nonce, tag))
     decryptor = cipher.decryptor()
+    if aad:
+        decryptor.authenticate_additional_data(aad)
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
     return plaintext
 
 
 def encrypt_chacha20poly1305(plaintext: Union[str, bytes, bytearray],
                              key: bytes,
+                             aad: Optional[bytes] = None,
                              ephemeral_pass: Optional[str] = None,
                              ephemeral_salt: Optional[bytes] = None) -> Dict[str, str]:
     """
-    Plaintext can be str, bytes, or bytearray. Convert if needed:
-      - str => encode to bytes
-      - bytearray => convert to bytes
+    ChaCha20-Poly1305 with optional AAD binding.
+    Returns ciphertext (includes tag) and nonce. No synthetic 'tag' field.
     """
     if isinstance(plaintext, str):
         plaintext = plaintext.encode("utf-8")
@@ -198,7 +207,7 @@ def encrypt_chacha20poly1305(plaintext: Union[str, bytes, bytearray],
 
     nonce = os.urandom(12)
     cipher = ChaCha20Poly1305(key)
-    ciphertext = cipher.encrypt(nonce, plaintext, b"")
+    ciphertext = cipher.encrypt(nonce, plaintext, aad if aad else b"")
 
     out = {
         "alg": "ChaCha20-Poly1305",
@@ -207,7 +216,8 @@ def encrypt_chacha20poly1305(plaintext: Union[str, bytes, bytearray],
     }
     details = {
         "Nonce(base64)": out["nonce"],
-        "Ciphertext(base64)": out["ciphertext"]
+        "Ciphertext(base64)": out["ciphertext"],
+        "AAD_len": (len(aad) if aad else 0)
     }
     if ephemeral_pass is not None:
         details["ephemeral_password"] = ephemeral_pass
@@ -225,7 +235,7 @@ def encrypt_chacha20poly1305(plaintext: Union[str, bytes, bytearray],
     return out
 
 
-def decrypt_chacha20poly1305(enc_dict: Dict[str, str], key: bytes) -> bytes:
+def decrypt_chacha20poly1305(enc_dict: Dict[str, str], key: bytes, aad: Optional[bytes] = None) -> bytes:
     import base64
     nonce = base64.b64decode(enc_dict["nonce"])
     ciphertext = base64.b64decode(enc_dict["ciphertext"])
@@ -237,13 +247,14 @@ def decrypt_chacha20poly1305(enc_dict: Dict[str, str], key: bytes) -> bytes:
         ephemeral_key=key,
         details={
             "Nonce(base64)": enc_dict["nonce"],
-            "Ciphertext(base64)": enc_dict["ciphertext"]
+            "Ciphertext(base64)": enc_dict["ciphertext"],
+            "AAD_len": (len(aad) if aad else 0)
         },
         ephemeral=True
     )
 
     cipher = ChaCha20Poly1305(key)
-    plaintext = cipher.decrypt(nonce, ciphertext, b"")
+    plaintext = cipher.decrypt(nonce, ciphertext, aad if aad else b"")
     return plaintext
 
 
@@ -253,6 +264,9 @@ def derive_or_recover_key(password: str,
                           time_cost: int = 3,
                           memory_cost: int = 65536,
                           parallelism: int = 4) -> Tuple[bytes, bytes]:
+    """
+    Wrapper: generate salt if missing; derive 32-byte key using Argon2id RAW.
+    """
     if salt is None:
         salt = os.urandom(16)
 
