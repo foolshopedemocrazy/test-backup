@@ -2,7 +2,7 @@ name: "Enhanced Security Reporting"
 
 on:
   workflow_run:
-    workflows: ["CodeQL Security Analysis"]
+    workflows: ["CodeQL Advanced"]
     types: [completed]
 
 jobs:

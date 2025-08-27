@@ -2,7 +2,7 @@ name: "AI Security Remediation"
 
 on:
   workflow_run:
-    workflows: ["CodeQL Security Analysis"]
+    workflows: ["CodeQL Advanced"]
     types: [completed]
 
 jobs:

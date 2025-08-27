@@ -1,11 +1,6 @@
-# DISABLED: This workflow was disabled because it contains external AI API dependencies.
-# To re-enable, remove these comments and restore the original triggers.
-
 name: Bearer Security Scan
 
 on:
-  # Original triggers disabled - contains external AI dependencies
-  workflow_dispatch:
   push:
     branches: [ main, master ]
   pull_request:
