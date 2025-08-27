@@ -31,14 +31,15 @@ jobs:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    
+
     strategy:
       fail-fast: false
       matrix:
-        language: 
+        language:
           - javascript
-          - python  
-          - java
+          - python
+          # Removed 'java' since no Java/Kotlin code detected
+          # Add back when Java code is present in the repository
 
     steps:
       - name: Checkout repository
@@ -47,23 +48,13 @@ jobs:
           fetch-depth: 2
           submodules: false
 
-      - name: Setup Java (Java analysis only)
-        if: matrix.language == 'java'
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql/config/${{ matrix.language }}.yml
 
-      # Skip autobuild for Java since we're using buildless extraction
-      # Only run autobuild for compiled languages that need it
-      - name: Autobuild (skip for Java with buildless)
-        if: matrix.language != 'java'
+      - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
