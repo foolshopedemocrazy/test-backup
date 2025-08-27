@@ -1,0 +1,28 @@
+name: "CodeQL Configuration"
+
+queries:
+  - name: Security and Quality
+    uses: security-and-quality
+  - name: Security Extended
+    uses: security-extended
+  - name: Custom Security Rules
+    uses: ./.github/CodeQL/queries/custom-rules.ql
+
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+
+paths:
+  - src
+  - lib
+  - bridge
+paths-ignore:
+  - node_modules
+  - '**/*.test.js'
+  - '**/*.spec.js'
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/vendor/**'
+
+trap-caching:
+  enabled: true

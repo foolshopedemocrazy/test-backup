@@ -1,0 +1,93 @@
+name: "Enhanced Security Reporting"
+
+on:
+  workflow_run:
+    workflows: ["CodeQL Security Analysis"]
+    types: [completed]
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download SARIF results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            const sarif = artifacts.data.artifacts.find(a => a.name === "sarif-results");
+            if (sarif) {
+              const download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: sarif.id,
+                archive_format: 'zip'
+              });
+              require('fs').writeFileSync('sarif.zip', Buffer.from(download.data));
+              require('child_process').execSync('unzip sarif.zip');
+            }
+
+      - name: Generate Enhanced Report
+        id: report-generation
+        uses: openai/openai-github-actions@v1
+        with:
+          model: "gpt-4"
+          api-key: ${{ secrets.AI_API_KEY }}
+          input-file: "results.sarif"
+          output-file: "enhanced_security_report.md"
+          prompt: |
+            Generate an enhanced security report from the SARIF results.
+            For each vulnerability, include:
+            
+            1. DETAILED TECHNICAL EXPLANATION:
+               - Provide in-depth technical details about the vulnerability
+               - Include relevant code patterns and security principles violated
+               - Explain the technical impact on system security
+            
+            2. NON-TECHNICAL SUMMARY:
+               - Create a plain language summary for non-technical stakeholders
+               - Use business impact terminology
+               - Avoid jargon and explain concepts simply
+               
+            3. ROOT CAUSE ANALYSIS:
+               - Precisely identify underlying code patterns causing the issue
+               - Show data flow visualization if applicable
+               - Identify architectural or design weaknesses
+               
+            4. PRIMARY RECOMMENDED FIX:
+               - Provide complete implementation of the recommended fix
+               - Include all code changes needed, formatted as git diff
+               - Explain security principles applied in the fix
+               
+            5. BEFORE/AFTER CONFIRMATION:
+               - Show the code before the fix
+               - Show the code after the fix
+               - Confirm how the vulnerability has been addressed
+            
+            Format the report in Markdown with clear sections and code blocks.
+
+      - name: Convert to HTML
+        run: python ${{ github.workspace }}/.github/CodeQL/tools/process_vulnerability_report.py enhanced_security_report.md security_report.html
+
+      - name: Upload HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report-html
+          path: security_report.html
+
+      - name: Upload Markdown Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report-md
+          path: enhanced_security_report.md

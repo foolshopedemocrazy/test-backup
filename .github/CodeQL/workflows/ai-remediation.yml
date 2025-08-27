@@ -1,0 +1,92 @@
+name: "AI Security Remediation"
+
+on:
+  workflow_run:
+    workflows: ["CodeQL Security Analysis"]
+    types: [completed]
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      security-events: read
+      actions: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download SARIF results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            const sarif = artifacts.data.artifacts.find(a => a.name === "sarif-results");
+            if (sarif) {
+              const download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: sarif.id,
+                archive_format: 'zip'
+              });
+              require('fs').writeFileSync('sarif.zip', Buffer.from(download.data));
+              require('child_process').execSync('unzip sarif.zip');
+            }
+
+      - name: Process with AI
+        id: ai-processing
+        uses: openai/openai-github-actions@v1
+        with:
+          model: "gpt-4"
+          api-key: ${{ secrets.AI_API_KEY }}
+          input-file: "results.sarif"
+          output-file: "remediation.json"
+          prompt: |
+            You are an expert security code remediation specialist.
+            Analyze the attached SARIF security findings and generate fixes.
+            
+            For each vulnerability:
+            1. Identify the root cause and vulnerable pattern
+            2. Generate optimal fix code that preserves functionality
+            3. Explain why your fix resolves the issue
+            4. Note any potential side effects
+            
+            Format your response as JSON with this structure:
+            [
+              {
+                "file_path": "path/to/file.py",
+                "fix_type": "replacement",
+                "start_line": 42,
+                "end_line": 45,
+                "replacement_code": "# Fixed code here",
+                "explanation": "This fixes the XSS by...",
+                "confidence": 0.9
+              }
+            ]
+
+      - name: Apply Fixes
+        run: python ${{ github.workspace }}/.github/CodeQL/tools/apply_ai_fixes.py remediation.json
+
+      - name: Create Fix PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "AI-generated security fixes"
+          body: |
+            # Automated Security Fixes
+            
+            This PR contains AI-generated fixes for security issues identified by CodeQL.
+            
+            ## Fixes Summary
+            
+            - Total issues fixed: $(cat fix_summary.txt | grep "Total" | cut -d':' -f2)
+            - Fix confidence: $(cat fix_summary.txt | grep "Average confidence" | cut -d':' -f2)
+            
+            Please review these changes carefully before merging.
+          branch: "security-fixes/ai-remediation"
+          commit-message: "fix: Apply AI-recommended security patches"
