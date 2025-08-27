@@ -5,34 +5,20 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "src"
-  - "app"
-  - "lib" 
-  - "services"
-  - "components"
-  - "utils"
-  - "scripts"
   - "**/*.js"
-  - "**/*.jsx"  
+  - "**/*.jsx"
   - "**/*.ts"
   - "**/*.tsx"
   - "**/*.mjs"
 
 paths-ignore:
+  - "node_modules"
   - "test"
   - "tests"
-  - "__tests__"
   - "**/*.test.*"
   - "**/*.spec.*"
-  - "node_modules"
-  - "dist"
-  - "build" 
-  - "coverage"
-  - "vendor"
-  - "third_party"
-  - "**/*.generated.*"
   - "**/*.min.js"
-  - "docs"
-  - "*.md"
+  - "dist"
+  - "build"
 
 disable-default-path-filters: true
