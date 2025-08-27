@@ -1,9 +1,0 @@
-# CWE,OWASP
-79,A01:2021-Broken Access Control
-89,A03:2021-Injection
-78,A03:2021-Injection
-22,A05:2021-Security Misconfiguration
-352,A01:2021-Broken Access Control
-502,A08:2021-Software and Data Integrity Failures
-918,A10:2021-Server-Side Request Forgery (SSRF)
-*_default,A00:Unmapped
