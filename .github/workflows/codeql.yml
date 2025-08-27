@@ -1,15 +1,20 @@
-name: CodeQL
+name: "CodeQL Security Analysis"
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master", "develop"]
     paths-ignore:
       - '**/*.md'
+      - '**/*.txt'
+      - 'docs/**'
+  pull_request:
+    branches: ["main", "master", "develop"]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.txt'
       - 'docs/**'
   schedule:
-    - cron: "14 3 * * 1"
+    - cron: '14 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -18,31 +23,48 @@ permissions:
   actions: read
 
 concurrency:
-  group: codeql-${{ github.ref }}
+  group: codeql-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
   analyze:
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript, python]
+        language: 
+          - javascript
+          - python  
+          - java
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          submodules: false
+
+      - name: Setup Java (Java analysis only)
+        if: matrix.language == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # IMPORTANT: per-language configs must exist
           config-file: ./.github/codeql/config/${{ matrix.language }}.yml
 
-      - name: Autobuild
+      - name: Autobuild (Java only)
+        if: matrix.language == 'java'
         uses: github/codeql-action/autobuild@v3
 
-      - name: Analyze
+      - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"

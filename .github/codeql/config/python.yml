@@ -1,15 +1,39 @@
-name: repo-config-python
-paths:
-  - src/
-  - app/
-  - services/
-paths-ignore:
-  - tests/
-  - test/
-  - third_party/
-  - vendor/
-  - '**/*.generated.*'
+name: "CodeQL Python Configuration"
+
 queries:
-  - uses: security-extended
+  - uses: security-extended  
   - uses: security-and-quality
-  - uses: ./.github/codeql/queries/python/python-custom.qls
+
+paths:
+  - "src"
+  - "app" 
+  - "lib"
+  - "services"
+  - "modules"
+  - "scripts"
+  - "utils"
+  - "**/*.py"
+
+paths-ignore:
+  - "test"
+  - "tests"
+  - "__pycache__"
+  - "**/*_test.py"
+  - "**/*_tests.py"
+  - "**/test_*.py"
+  - "venv"
+  - "env"
+  - ".venv"
+  - ".env"
+  - "build"
+  - "dist"
+  - "*.egg-info"
+  - "**/__pycache__/**"
+  - "vendor"
+  - "third_party"
+  - "**/*.generated.*"
+  - "**/migrations/**"
+  - "docs"
+  - "*.md"
+
+disable-default-path-filters: true
