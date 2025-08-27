@@ -1,108 +1,31 @@
 name: CodeQL
-
 on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-  schedule:
-    - cron: "14 3 * * 1"
+  push: { branches: [ "main", "master" ] }
+  pull_request: { branches: [ "main", "master" ] }
+  schedule: [ { cron: "14 3 * * 1" } ]
   workflow_dispatch:
-
 permissions:
   contents: read
   security-events: write
   actions: read
-
 concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  detect-languages:
-    runs-on: ubuntu-latest
-    outputs:
-      langs: ${{ steps.set.outputs.languages }}
-    steps:
-      - name: Detect CodeQL languages
-        id: set
-        uses: advanced-security/set-codeql-language-matrix@v1
-        with:
-          access-token: ${{ secrets.GITHUB_TOKEN }}
-          endpoint: ${{ github.api_url }}/repos/${{ github.repository }}/languages
-          # Exclude languages you don't want scanned (prevents false positives & pack clashes)
-          exclude: "go,cpp,ruby,swift"
-
   analyze:
-    needs: detect-languages
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        language: ${{ fromJson(needs.detect-languages.outputs.langs) }}
-
+        language: [ "javascript", "python" ]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # Use a language-scoped config so we only load matching packs
-          config-file: ./.github/codeql/config/${{ matrix.language }}.yml
-
-      # For compiled languages CodeQL will autobuild; for interpreted it's a no-op
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Analyze (defer upload)
-        uses: github/codeql-action/analyze@v3
+          config-file: ./.github/codeql/config/config.yml
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
-          upload: failure-only
-
-      - name: Filter SARIF (paths & rule IDs)
-        uses: advanced-security/filter-sarif@v1
-        with:
-          input: sarif-results/${{ matrix.language }}.sarif
-          output: sarif-results/${{ matrix.language }}.filtered.sarif
-          include: |
-            +src/**
-            +app/**
-            +services/**
-          exclude: |
-            -tests/**
-            -test/**
-            -third_party/**
-            -vendor/**
-            -**/*.generated.*
-
-      - name: Upload filtered SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sarif-results/${{ matrix.language }}.filtered.sarif
-
-      - name: Persist filtered SARIF (audit trail)
-        uses: actions/upload-artifact@v4
-        with:
-          name: sarif-${{ matrix.language }}
-          path: sarif-results/${{ matrix.language }}.filtered.sarif
-
-      - name: Executive summary (Markdown)
-        run: |
-          python .github/codeql/tools/sarif_summary.py \
-            --sarif "sarif-results/${{ matrix.language }}.filtered.sarif" \
-            --cwe-map ".github/codeql/compliance/cwe_to_owasp.csv" \
-            --out "summary-${{ matrix.language }}.md"
-        shell: bash
-
-      - name: Upload executive summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: exec-summary-${{ matrix.language }}
-          path: summary-${{ matrix.language }}.md
