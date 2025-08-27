@@ -33,8 +33,8 @@ jobs:
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           endpoint: ${{ github.api_url }}/repos/${{ github.repository }}/languages
-          # optional: exclude languages (comma-separated)
-          # exclude: "ruby,swift"
+          # Exclude languages you don't want scanned (prevents false positives & pack clashes)
+          exclude: "go,cpp,ruby,swift"
 
   analyze:
     needs: detect-languages
@@ -51,12 +51,14 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          config-file: ./.github/codeql/config.yml
+          # Use a language-scoped config so we only load matching packs
+          config-file: ./.github/codeql/config/${{ matrix.language }}.yml
 
+      # For compiled languages CodeQL will autobuild; for interpreted it's a no-op
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
-      - name: Analyze (no upload yet)
+      - name: Analyze (defer upload)
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
