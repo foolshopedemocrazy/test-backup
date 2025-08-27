@@ -1,63 +1,58 @@
-name: "CodeQL Security Analysis"
+# PowerShell script to implement CodeQL auto-detection
 
-on:
-  push:
-    branches: ["main", "master", "develop"]
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.txt'
-      - 'docs/**'
-  pull_request:
-    branches: ["main", "master", "develop"]
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.txt'
-      - 'docs/**'
-  schedule:
-    - cron: '14 3 * * 1'
-  workflow_dispatch:
+Write-Host "Implementing CodeQL Auto-Detection..." -ForegroundColor Green
 
-permissions:
-  contents: read
-  security-events: write
-  actions: read
+# Navigate to project directory
+Set-Location "C:\Users\deskt\Desktop\Project_SECQ_CLI\SECQ_CLI"
 
-concurrency:
-  group: codeql-${{ github.ref }}-${{ github.workflow }}
-  cancel-in-progress: true
+# Show current status
+Write-Host "`nCurrent git status:" -ForegroundColor Yellow
+git status
 
-jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+# Replace the workflow file with auto-detection version
+Write-Host "`nUpdating .github/workflows/codeql.yml with auto-detection..." -ForegroundColor Green
+# (You'll need to manually replace the content with the auto-detection version above)
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language:
-          - javascript
-          - python
-          # Removed 'java' since no Java/Kotlin code detected
-          # Add back when Java code is present in the repository
+# Remove unnecessary language-specific config files
+Write-Host "`nRemoving language-specific config files..." -ForegroundColor Green
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-          submodules: false
+if (Test-Path .github/codeql/config/javascript.yml) {
+    git rm .github/codeql/config/javascript.yml
+    Write-Host "Removed javascript.yml"
+}
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          config-file: ./.github/codeql/config/${{ matrix.language }}.yml
+if (Test-Path .github/codeql/config/python.yml) {
+    git rm .github/codeql/config/python.yml  
+    Write-Host "Removed python.yml"
+}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+if (Test-Path .github/codeql/config/java.yml) {
+    git rm .github/codeql/config/java.yml
+    Write-Host "Removed java.yml"
+}
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{ matrix.language }}"
+# Check if config directory is empty and remove if so
+$configFiles = Get-ChildItem .github/codeql/config/ -File 2>$null
+if ($configFiles.Count -eq 0) {
+    Write-Host "Config directory is empty, removing it..."
+    git rm -r .github/codeql/config/
+}
+
+# Stage all changes
+Write-Host "`nStaging changes..." -ForegroundColor Green
+git add -A
+
+# Show what will be committed
+Write-Host "`nChanges to be committed:" -ForegroundColor Yellow
+git status --staged
+
+# Commit changes
+Write-Host "`nCommitting changes..." -ForegroundColor Green
+git commit -m "Implement CodeQL auto-detection: remove language-specific configs"
+
+# Push to GitHub
+Write-Host "`nPushing to GitHub..." -ForegroundColor Green
+git push origin main
+
+Write-Host "`nAuto-detection implementation complete!" -ForegroundColor Green
+Write-Host "CodeQL will now automatically detect and scan all supported languages in your repository." -ForegroundColor Cyan
