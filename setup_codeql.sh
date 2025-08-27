@@ -1,136 +1,391 @@
 #!/usr/bin/env bash
+# fix_codeql_updates.sh
+# -----------------------------------------------------------------------------
+# Purpose: Apply robust CodeQL workflow fixes:
+# - Add required inputs to the language-detection step
+# - Switch to per-language CodeQL configs (no mixed dbschemes)
+# - Create one custom query pack per language (javascript / python)
+# - Keep SARIF filtering + executive summary utilities
+# - Migrate old files; back up anything replaced
+#
+# Usage (run from repo root):
+#   bash fix_codeql_updates.sh
+#
+# Env toggles:
+#   DO_GIT_COMMIT=0            # skip git commit
+#   BRANCH_NAME=my/codeql-fix  # custom branch name
+# -----------------------------------------------------------------------------
 set -euo pipefail
 
-RED=$'\033[1;31m'; GRN=$'\033[1;32m'; YLW=$'\033[1;33m'; NC=$'\033[0m'
-pass() { echo "${GRN}[OK]${NC} $*"; }
-warn() { echo "${YLW}[WARN]${NC} $*"; }
-fail() { echo "${RED}[FAIL]${NC} $*"; exit 1; }
+# -------- Pretty logging
+GRN=$'\033[1;32m'; YLW=$'\033[1;33m'; RED=$'\033[1;31m'; NC=$'\033[0m'
+say()  { printf "${GRN}[OK]${NC} %s\n" "$*"; }
+warn() { printf "${YLW}[WARN]${NC} %s\n" "$*"; }
+err()  { printf "${RED}[ERR]${NC} %s\n" "$*" >&2; }
 
-# Ensure inside a git repo
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "Run from your repository root (no .git found)."
+# -------- Settings
+BRANCH_NAME="${BRANCH_NAME:-chore/codeql-fix-updates}"
+DO_GIT_COMMIT="${DO_GIT_COMMIT:-1}"
 
-ROOT="."
-GH=".github"
-WF="${GH}/workflows/codeql.yml"
-CFG="${GH}/codeql/config.yml"
-QDIR="${GH}/codeql/queries"
-QLPACK="${QDIR}/qlpack.yml"
-QEX="${QDIR}/example-javascript.ql"
-COMP="${GH}/codeql/compliance/cwe_to_owasp.csv"
-COMPREADME="${GH}/codeql/compliance/README.md"
-TOOL="${GH}/codeql/tools/sarif_summary.py"
-TOPREADME="${GH}/CODEQL_README.md"
+BACKUP_ROOT=".github/backups"
+TIMESTAMP="$(date -u +'%Y%m%dT%H%M%SZ')"
+BACKUP_DIR="${BACKUP_ROOT}/fix-${TIMESTAMP}"
 
-# 1) Presence checks
-for p in "$GH" "$GH/workflows" "$GH/codeql" "$QDIR" "${GH}/codeql/compliance" "${GH}/codeql/tools"; do
-  [ -d "$p" ] || fail "Missing directory: $p"
-done
-pass "Directories present."
+WF_DIR=".github/workflows"
+WF_FILE="${WF_DIR}/codeql.yml"
 
-for f in "$WF" "$CFG" "$QLPACK" "$QEX" "$COMP" "$COMPREADME" "$TOOL" "$TOPREADME"; do
-  [ -f "$f" ] || fail "Missing file: $f"
-done
-pass "Files present."
+CODEQL_ROOT=".github/codeql"
+CFG_DIR="${CODEQL_ROOT}/config"
+Q_ROOT="${CODEQL_ROOT}/queries"
+Q_JS_DIR="${Q_ROOT}/javascript"
+Q_PY_DIR="${Q_ROOT}/python"
+TOOL_DIR="${CODEQL_ROOT}/tools"
+COMP_DIR="${CODEQL_ROOT}/compliance"
 
-# 2) Content sanity checks (simple greps)
-grep -q 'name: CodeQL' "$WF" || fail "Workflow missing 'name: CodeQL'."
-grep -q 'github/codeql-action/init@v3' "$WF" || fail "Workflow missing codeql init@v3."
-grep -q 'github/codeql-action/analyze@v3' "$WF" || fail "Workflow missing codeql analyze@v3."
-grep -q 'advanced-security/set-codeql-language-matrix@v1' "$WF" || fail "Workflow missing language matrix step."
-grep -q 'upload-sarif@v3' "$WF" || fail "Workflow missing upload-sarif step."
-pass "Workflow content looks correct."
-
-grep -q '^paths:' "$CFG" || fail "config.yml missing 'paths:'"
-grep -q '^paths-ignore:' "$CFG" || fail "config.yml missing 'paths-ignore:'"
-grep -q 'queries:' "$CFG" || fail "config.yml missing 'queries:'"
-grep -q 'security-extended' "$CFG" || fail "config.yml missing 'security-extended' query suite."
-grep -q 'security-and-quality' "$CFG" || fail "config.yml missing 'security-and-quality' query suite."
-pass "Config content looks correct."
-
-grep -q 'name:' "$QLPACK" || fail "qlpack.yml missing name."
-grep -q 'dependencies:' "$QLPACK" || fail "qlpack.yml missing dependencies."
-pass "qlpack.yml looks correct."
-
-grep -q '@id js/insecure-sql-concat-demo' "$QEX" || fail "example-javascript.ql missing @id."
-grep -q 'external/cwe/cwe-89' "$QEX" || fail "example-javascript.ql missing CWE tag."
-pass "Example query content looks correct."
-
-grep -q '\*_default' "$COMP" || fail "cwe_to_owasp.csv missing *_default fallback mapping."
-pass "Compliance mapping CSV looks correct."
-
-# 3) Optional YAML validation if tools available
-if command -v yq >/dev/null 2>&1; then
-  yq '.' "$WF" >/dev/null && pass "Workflow YAML parsed by yq."
-  yq '.' "$CFG" >/dev/null && pass "Config YAML parsed by yq."
-else
-  warn "yq not found; skipping strict YAML parsing."
-fi
-
-if command -v yamllint >/dev/null 2>&1; then
-  yamllint -d "{extends: default, rules: {line-length: {max: 180}}}" "$WF" "$CFG" && pass "yamllint passed."
-else
-  warn "yamllint not found; skipping lint."
-fi
-
-# 4) Run the sarif_summary.py tool against a synthetic SARIF
-PYTHON_BIN="${PYTHON_BIN:-python}"
-command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python not found. Install Python or set PYTHON_BIN."
-
-TMP_SARIF="$(mktemp -t demo_sarif.XXXXXX).sarif"
-TMP_OUT="$(mktemp -t demo_summary.XXXXXX).md"
-
-cat > "$TMP_SARIF" <<'JSON'
-{
-  "version": "2.1.0",
-  "runs": [
-    {
-      "tool": {
-        "driver": {
-          "name": "CodeQL",
-          "rules": [
-            {
-              "id": "js/insecure-sql-concat-demo",
-              "shortDescription": {"text": "Demo rule"},
-              "properties": {
-                "security-severity": "7.5",
-                "tags": ["external/cwe/cwe-89"]
-              }
-            }
-          ]
-        }
-      },
-      "results": [
-        {
-          "ruleId": "js/insecure-sql-concat-demo",
-          "message": {"text": "Insecure concatenation"},
-          "baselineState": "new",
-          "properties": {"security-severity": "8.1"}
-        }
-      ]
-    }
-  ]
+# -------- Guards
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  err "Run this script from your repository root ('.git' not found)."
+  exit 1
 }
-JSON
 
-chmod +x "$TOOL" || true
-"$PYTHON_BIN" "$TOOL" --sarif "$TMP_SARIF" --cwe-map "$COMP" --out "$TMP_OUT"
+# -------- Prepare dirs
+mkdir -p "${WF_DIR}" "${CFG_DIR}" "${Q_JS_DIR}" "${Q_PY_DIR}" "${TOOL_DIR}" "${COMP_DIR}" "${BACKUP_ROOT}"
 
-[ -s "$TMP_OUT" ] || fail "sarif_summary.py did not produce output."
-grep -q '## Alerts by Severity' "$TMP_OUT" || fail "Summary missing severity table."
-grep -q '## Alerts by OWASP Group' "$TMP_OUT" || fail "Summary missing OWASP table."
-pass "sarif_summary.py produced a valid summary."
+# -------- Back up legacy/mixed items (we *move* them)
+backup_if_exists() {
+  local path="$1"
+  if [ -e "$path" ]; then
+    mkdir -p "${BACKUP_DIR}"
+    warn "Backing up: $path -> ${BACKUP_DIR}/"
+    mv "$path" "${BACKUP_DIR}/"
+  fi
+}
 
-# 5) Git checks
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-[ -n "$BRANCH" ] || fail "Could not determine current branch."
-pass "On branch: $BRANCH"
+# Legacy mixed-case folder
+[ -d ".github/CodeQL" ] && backup_if_exists ".github/CodeQL"
 
-if git log -1 --pretty=%s | grep -qi 'codeql'; then
-  pass "Last commit message references CodeQL."
-else
-  warn "Last commit message does not reference CodeQL (this is OK if you skipped auto-commit)."
+# Old single config file (we move it out since we now use per-language configs)
+[ -f "${CODEQL_ROOT}/config.yml" ] && backup_if_exists "${CODEQL_ROOT}/config.yml"
+
+# Old mixed-language pack (root cause of dbscheme conflict) → move it out
+[ -f "${Q_ROOT}/qlpack.yml" ] && backup_if_exists "${Q_ROOT}/qlpack.yml"
+
+# Backup existing workflow (we overwrite it)
+[ -f "${WF_FILE}" ] && backup_if_exists "${WF_FILE}"
+
+# -------- Write corrected workflow (Option A + per-language config path)
+cat > "${WF_FILE}" <<'YAML'
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  schedule:
+    - cron: "14 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-languages:
+    runs-on: ubuntu-latest
+    outputs:
+      langs: ${{ steps.set.outputs.languages }}
+    steps:
+      - name: Detect CodeQL languages
+        id: set
+        uses: advanced-security/set-codeql-language-matrix@v1
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          endpoint: ${{ github.api_url }}/repos/${{ github.repository }}/languages
+          # Exclude languages you don't want scanned until you add packs/configs for them
+          exclude: "go,cpp,ruby,swift"
+
+  analyze:
+    needs: detect-languages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJson(needs.detect-languages.outputs.langs) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # language-scoped config prevents pack/dbscheme mismatches
+          config-file: ./.github/codeql/config/${{ matrix.language }}.yml
+
+      # For compiled languages this may build; for interpreted it's a no-op
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Analyze (defer upload)
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          output: sarif-results
+          upload: failure-only
+
+      - name: Filter SARIF (paths & rule IDs)
+        uses: advanced-security/filter-sarif@v1
+        with:
+          input: sarif-results/${{ matrix.language }}.sarif
+          output: sarif-results/${{ matrix.language }}.filtered.sarif
+          include: |
+            +src/**
+            +app/**
+            +services/**
+          exclude: |
+            -tests/**
+            -test/**
+            -third_party/**
+            -vendor/**
+            -**/*.generated.*
+
+      - name: Upload filtered SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sarif-results/${{ matrix.language }}.filtered.sarif
+
+      - name: Persist filtered SARIF (audit trail)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sarif-${{ matrix.language }}
+          path: sarif-results/${{ matrix.language }}.filtered.sarif
+
+      - name: Executive summary (Markdown)
+        run: |
+          python .github/codeql/tools/sarif_summary.py \
+            --sarif "sarif-results/${{ matrix.language }}.filtered.sarif" \
+            --cwe-map ".github/codeql/compliance/cwe_to_owasp.csv" \
+            --out "summary-${{ matrix.language }}.md"
+        shell: bash
+
+      - name: Upload executive summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exec-summary-${{ matrix.language }}
+          path: summary-${{ matrix.language }}.md
+YAML
+say "Wrote ${WF_FILE}"
+
+# -------- Per-language configs
+cat > "${CFG_DIR}/python.yml" <<'YAML'
+name: advanced-repo-config-python
+paths:
+  - src/
+  - app/
+  - services/
+paths-ignore:
+  - tests/
+  - test/
+  - third_party/
+  - vendor/
+  - '**/*.generated.*'
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+  - uses: ./.github/codeql/queries/python
+YAML
+say "Wrote ${CFG_DIR}/python.yml"
+
+cat > "${CFG_DIR}/javascript.yml" <<'YAML'
+name: advanced-repo-config-javascript
+paths:
+  - src/
+  - app/
+  - services/
+paths-ignore:
+  - tests/
+  - test/
+  - third_party/
+  - vendor/
+  - '**/*.generated.*'
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+  - uses: ./.github/codeql/queries/javascript
+YAML
+say "Wrote ${CFG_DIR}/javascript.yml"
+
+# -------- Per-language packs
+cat > "${Q_PY_DIR}/qlpack.yml" <<'YAML'
+name: answerchain.python-queries
+version: 0.0.1
+library: false
+dependencies:
+  codeql/python-all: "*"
+YAML
+say "Wrote ${Q_PY_DIR}/qlpack.yml"
+
+cat > "${Q_JS_DIR}/qlpack.yml" <<'YAML'
+name: answerchain.javascript-queries
+version: 0.0.1
+library: false
+dependencies:
+  codeql/javascript-all: "*"
+YAML
+say "Wrote ${Q_JS_DIR}/qlpack.yml"
+
+# -------- Seed example queries if none exist
+seed_example_if_empty() {
+  local dir="$1" lang="$2"
+  if ! ls -1 "${dir}"/*.ql >/dev/null 2>&1; then
+    case "$lang" in
+      python)
+        cat > "${dir}/find-todo-comments.ql" <<'QL'
+import python
+/**
+ * Flags TODO/FIXME style comments.
+ */
+from Comment c, string t
+where t = c.getText() and
+      (t.regexpMatch("(?i)\\bTODO\\b") or t.regexpMatch("(?i)\\bFIXME\\b"))
+select c, "Possible task marker in comment."
+QL
+        ;;
+      javascript)
+        cat > "${dir}/find-todo-comments.ql" <<'QL'
+import javascript
+/**
+ * Flags TODO/FIXME style comments.
+ */
+from Comment c, string t
+where t = c.getText() and
+      (t.regexpMatch("(?i)\\bTODO\\b") or t.regexpMatch("(?i)\\bFIXME\\b"))
+select c, "Possible task marker in comment."
+QL
+        ;;
+    esac
+    say "Seeded example query in ${dir}"
+  fi
+}
+seed_example_if_empty "${Q_PY_DIR}" "python"
+seed_example_if_empty "${Q_JS_DIR}" "javascript"
+
+# -------- Migrate any loose top-level queries to language folders
+# Heuristic: inspect "import <lang>" to decide destination
+shopt -s nullglob
+for q in "${Q_ROOT}"/*.ql; do
+  if grep -qE '^import[[:space:]]+javascript' "$q"; then
+    dest="${Q_JS_DIR}/$(basename "$q")"
+    warn "Moving JS query $(basename "$q") -> ${Q_JS_DIR}/"
+    mv "$q" "$dest"
+  elif grep -qE '^import[[:space:]]+python' "$q"; then
+    dest="${Q_PY_DIR}/$(basename "$q")"
+    warn "Moving PY query $(basename "$q") -> ${Q_PY_DIR}/"
+    mv "$q" "$dest"
+  else
+    # default to javascript if unknown (safer than leaving it unused)
+    dest="${Q_JS_DIR}/$(basename "$q")"
+    warn "Unknown language for $(basename "$q"); defaulting to javascript/"
+    mv "$q" "$dest"
+  fi
+done
+shopt -u nullglob
+
+# -------- Ensure compliance + tools exist (create minimal if missing)
+if [ ! -f "${COMP_DIR}/cwe_to_owasp.csv" ]; then
+  cat > "${COMP_DIR}/cwe_to_owasp.csv" <<'CSV'
+CWE,OWASP
+79,A03: Injection
+89,A03: Injection
+200,A01: Broken Access Control
+22,A05: Security Misconfiguration
+CSV
+  say "Wrote ${COMP_DIR}/cwe_to_owasp.csv"
 fi
 
-# 6) Final
-pass "All verification checks passed."
-echo "You’re good to go. Open GitHub → Security → Code scanning alerts after your next run."
+if [ ! -f "${TOOL_DIR}/sarif_summary.py" ]; then
+  cat > "${TOOL_DIR}/sarif_summary.py" <<'PY'
+#!/usr/bin/env python3
+import argparse, json, csv
+p = argparse.ArgumentParser()
+p.add_argument("--sarif", required=True)
+p.add_argument("--cwe-map", required=True)
+p.add_argument("--out", required=True)
+a = p.parse_args()
+
+cwe_map = {}
+with open(a.cwe_map, newline="", encoding="utf-8") as f:
+    r = csv.DictReader(f)
+    for row in r:
+        cwe_map[row["CWE"].strip()] = row["OWASP"].strip()
+
+with open(a.sarif, encoding="utf-8") as f:
+    sarif = json.load(f)
+
+rows = []
+for run in sarif.get("runs", []):
+    driver = (run.get("tool") or {}).get("driver") or {}
+    rules = {r.get("id"): r for r in (driver.get("rules") or [])}
+    for res in run.get("results", []) or []:
+        rid = res.get("ruleId") or ""
+        sev = (res.get("properties") or {}).get("security-severity") or res.get("level") or "warning"
+        msg = (res.get("message") or {}).get("text","")
+        tags = (rules.get(rid,{}).get("properties") or {}).get("tags",[])
+        cwes = [t.split("-")[-1] for t in tags if t.upper().startswith("CWE-")]
+        owasp = "; ".join(sorted({cwe_map.get(c,"") for c in cwes if c in cwe_map})) or "-"
+        rows.append((sev, rid, owasp, msg[:120].replace("|","\\|")))
+
+rows.sort(key=lambda x: x[0], reverse=True)
+with open(a.out, "w", encoding="utf-8") as f:
+    f.write("# Executive security summary\n\n")
+    f.write("| Severity | Rule | OWASP | Message |\n|---|---|---|---|\n")
+    for sev, rid, owasp, msg in rows:
+        f.write(f"| {sev} | `{rid}` | {owasp} | {msg} |\n")
+print(f"Wrote {a.out}")
+PY
+  chmod +x "${TOOL_DIR}/sarif_summary.py"
+  say "Wrote ${TOOL_DIR}/sarif_summary.py"
+fi
+
+# -------- Git commit (optional)
+if [ "${DO_GIT_COMMIT}" = "1" ]; then
+  CUR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "${CUR_BRANCH}" != "${BRANCH_NAME}" ]; then
+    if git rev-parse --verify "${BRANCH_NAME}" >/dev/null 2>&1; then
+      git checkout "${BRANCH_NAME}"
+    else
+      git checkout -b "${BRANCH_NAME}"
+    fi
+  fi
+
+  git add "${WF_FILE}" \
+          "${CFG_DIR}/python.yml" "${CFG_DIR}/javascript.yml" \
+          "${Q_JS_DIR}/qlpack.yml" "${Q_PY_DIR}/qlpack.yml" \
+          "${Q_JS_DIR}"/*.ql "${Q_PY_DIR}"/*.ql
+
+  [ -f "${COMP_DIR}/cwe_to_owasp.csv" ] && git add "${COMP_DIR}/cwe_to_owasp.csv"
+  [ -f "${TOOL_DIR}/sarif_summary.py" ] && git add "${TOOL_DIR}/sarif_summary.py"
+  [ -d "${BACKUP_DIR}" ] && git add "${BACKUP_DIR}"
+
+  if git diff --cached --quiet; then
+    warn "Nothing staged for commit (files may already match)."
+  else
+    git commit -m "fix(codeql): add required language-matrix inputs, per-language configs & packs; keep SARIF filtering/reporting"
+    say "Committed changes on branch '${BRANCH_NAME}'."
+    say "Next: git push -u origin ${BRANCH_NAME}"
+  fi
+else
+  warn "Skipping git commit (DO_GIT_COMMIT=${DO_GIT_COMMIT}). Files written to working tree."
+fi
+
+say "All done. Re-run the CodeQL workflow from GitHub Actions."
