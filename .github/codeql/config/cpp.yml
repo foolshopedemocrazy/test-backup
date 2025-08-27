@@ -5,17 +5,5 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "**/*.c"
-  - "**/*.cpp"
-  - "**/*.cc"
-  - "**/*.cxx"
-  - "**/*.h"
-  - "**/*.hpp"
-
-paths-ignore:
-  - "build"
-  - "vendor"
-  - "third_party"
-  - "**/*.generated.*"
-
-disable-default-path-filters: true
+  - "src/"
+  - "bridge/"

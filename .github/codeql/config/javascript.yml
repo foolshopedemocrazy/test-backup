@@ -5,20 +5,5 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "**/*.js"
-  - "**/*.jsx"
-  - "**/*.ts"
-  - "**/*.tsx"
-  - "**/*.mjs"
-
-paths-ignore:
-  - "node_modules"
-  - "test"
-  - "tests"
-  - "**/*.test.*"
-  - "**/*.spec.*"
-  - "**/*.min.js"
-  - "dist"
-  - "build"
-
-disable-default-path-filters: true
+  - "src/"
+  - "bridge/"

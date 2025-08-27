@@ -5,16 +5,5 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "**/*.py"
-
-paths-ignore:
-  - "test"
-  - "tests"
-  - "**/*_test.py"
-  - "**/test_*.py"
-  - "venv"
-  - ".venv"
-  - "__pycache__"
-  - "**/*.egg-info"
-
-disable-default-path-filters: true
+  - "src/"
+  - "bridge/"

@@ -5,11 +5,5 @@ queries:
   - uses: security-and-quality
 
 paths:
-  - "**/*.go"
-
-paths-ignore:
-  - "vendor"
-  - "**/*_test.go"
-  - "**/*.pb.go"
-
-disable-default-path-filters: true
+  - "src/"
+  - "bridge/"
