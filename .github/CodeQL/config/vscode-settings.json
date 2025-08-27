@@ -1,7 +1,0 @@
-{
-  "codeQL.runQueries": "onSave",
-  "codeQL.runQuerySuite": "security-and-quality",
-  "codeQL.useServerMode": true,
-  "codeQL.securityAlertHighlights": "error",
-  "codeQL.enableInlineResults": true
-}
