@@ -1,0 +1,16 @@
+name: repo-config-python
+paths:
+  - src/
+  - app/
+  - services/
+  - backend/
+  - server/
+paths-ignore:
+  - tests/
+  - test/
+  - third_party/
+  - vendor/
+  - '**/*.generated.*'
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
